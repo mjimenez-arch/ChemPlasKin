@@ -13,13 +13,17 @@ find_package(Threads REQUIRED)
 include_directories("../cantera/include")
 include_directories("../cantera/src")
 include_directories("../cantera/include/cantera/ext")
+include_directories("../cantera/ext/eigen")
+include_directories("/root/mambaforge3/include") # For fmt and yaml-cpp headers
+
 link_directories("../cantera/build/lib")
+link_directories("/root/mambaforge3/lib") # For libfmt and libyaml-cpp
 
 add_executable(ChemPlasKin src/master.cpp)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     find_library(ACCELERATE_FRAMEWORK Accelerate)
-    target_link_libraries(ChemPlasKin PRIVATE cantera_shared ${ACCELERATE_FRAMEWORK} Threads::Threads)
+    target_link_libraries(ChemPlasKin PRIVATE cantera_shared fmt ${ACCELERATE_FRAMEWORK} Threads::Threads)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    target_link_libraries(ChemPlasKin PRIVATE cantera_shared stdc++fs Threads::Threads)
+    target_link_libraries(ChemPlasKin PRIVATE cantera_shared fmt stdc++fs Threads::Threads)
 endif()

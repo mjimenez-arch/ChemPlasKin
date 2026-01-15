@@ -1,4 +1,6 @@
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.ticker import LogLocator, LogFormatter
 import pandas as pd
@@ -15,4 +17,5 @@ plt.tick_params(axis='both', which='major', labelsize=12)
 plt.ylim(0, 160)
 plt.legend(fontsize=12, loc='upper left')
 plt.tight_layout()
-plt.show()
+plt.savefig("O2_fraction.png")
+# plt.show()
