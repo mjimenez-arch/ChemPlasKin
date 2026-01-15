@@ -39,3 +39,5 @@ cmake-build-debug/
 
 !Vp-t.csv
 !ne-t.csv
+*.png
+*.csv

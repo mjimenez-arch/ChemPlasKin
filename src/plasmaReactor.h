@@ -65,7 +65,11 @@ public:
         detailPlasmaHeatModel = (plasmaHeatModel != "Flitti");
 
         // Register energy transfer data for plasma reactions
-        setPlasmaEnergyTransfer(sol->reaction_section);
+        std::vector<AnyMap> reactionData;
+        for (size_t i = 0; i < m_kinetics->nReactions(); i++) {
+            reactionData.push_back(m_kinetics->reaction(i)->parameters());
+        }
+        setPlasmaEnergyTransfer(reactionData);
 
         // Create a map for all species
         for (size_t i = 0; i < m_gas->nSpecies(); i++) {
