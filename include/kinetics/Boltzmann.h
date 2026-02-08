@@ -28,13 +28,12 @@ struct BoltzmannData : public ReactionData
 
     static double electronTemp; //!< electron temperature
     static double reducedEfield; //!< reduced electric field [Td]
-
 };
 
 class BoltzmannRate : public ReactionRate
 {
 public:
-//
+
     BoltzmannRate(const AnyMap& node, const UnitStack& rate_units={});
 
     unique_ptr<MultiRateBase> newMultiRate() const override {
@@ -46,20 +45,7 @@ public:
         if (useCachedSolutions) {
             return cachedSolutions[processIndex];
         }
-        return Avogadro * bsolver.rate(F0, process);
-//        std::cout << "Debug line 1. BoltzmannRate " << "process" << process << std::endl;
-        // For each writing time step, only recalculate reaction rate of each process ONCE.
-        // Avoid recalculating in each integration dt (CVODE)
-        /*
-        if(countEval < NumProcess){
-            countEval += 1;
-            rateValue = bsolver.rate(f1,process); // cache the result
-//            std::cout << "Debug line 2. Updating BoltzmannRate. rateValue: " << rateValue << std::endl;
-            return Avogadro*rateValue; // convert unit to m^3/(kmol*s)
-        } else{
-//            std::cout << "Debug line 2. NoUpdating BoltzmannRate. rateValue: " << rateValue << std::endl;
-            return Avogadro*rateValue;
-        } */
+        return branch_ratio * Avogadro * bsolver.rate(F0, process);
     }
 
     const string type() const override {
@@ -69,9 +55,7 @@ public:
     static CppBOLOS::BoltzmannSolver bsolver;
 
     static void updateBoltzmannSolver(const int maxItr=200, const double rtol=1e-5, const double delta0=1E14){
-        // bsolver.init();
         F0 = bsolver.converge(F0, maxItr, rtol, delta0); // converge() will update Te
-//        BoltzmannData::electronTemp = bsolver.get_Te();
         BoltzmannData::electronTemp = std::max(bsolver.get_Te(), bsolver.get_kT()); // enforce T_e >= T_gas
         BoltzmannData::reducedEfield = bsolver.get_EN();
         updateOnce = true;
@@ -104,6 +88,7 @@ public:
 private:
     std::string process;
     size_t processIndex;
+    double branch_ratio = 1.0;
 
 };
 

@@ -23,15 +23,11 @@ bool BoltzmannData::update(const ThermoPhase& phase, const Kinetics& kin)
 {
     if(BoltzmannRate::updateOnce) {
         BoltzmannRate::updateOnce = false;
-//        std::cout << "Update yes!" << std::endl;
         return true;
     } else {
-//        std::cout << "Update No!" << std::endl;
         return false;
     }
-
 }
-
 
 BoltzmannRate::BoltzmannRate(const AnyMap& node, const UnitStack& rate_units)
 {
@@ -46,7 +42,15 @@ BoltzmannRate::BoltzmannRate(const AnyMap& node, const UnitStack& rate_units)
         throw InputFileError("BoltzmannRate", m_input, "\"process\" is missing!");
     }
 
-    LOG_INFO("Initial BoltzmannRate of " << process <<": " << bsolver.rate(F0, process) );
+    if (node.hasKey("branch_ratio")) {
+        branch_ratio = node["branch_ratio"].asDouble();
+    }
+
+    LOG_INFO("Initial BoltzmannRate of " << process
+             <<": " << branch_ratio * bsolver.rate(F0, process)
+             << ", branching ratio: " << branch_ratio
+             );
+
     ProcessesList.push_back(process);
     processIndex = NumProcess;
     NumProcess += 1;
