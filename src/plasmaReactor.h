@@ -92,8 +92,6 @@ public:
         // Time derivative of the solution vector [T, he, Ep, e_vib(N2), Y_1, Y_2, ... Y_K],
         // *ydot*, are defined for clear and convenient access to these vectors:
         nSteps ++;
-//        std::cout << std::scientific << std::setprecision(10);
-//        std::cout << "eval t: " << t << std::endl;
         double temperature = y[0];
         m_he = y[1];
         m_Ep = y[2];
@@ -140,6 +138,9 @@ public:
             *dTdt = 0.0;
             *eVibN2_dot = 0.0;
             *HE_dot = 0.0;
+            double P_ext = BoltzmannRate::bsolver.elec_power() * Avogadro * m_gas->molarDensity()* ElectronCharge
+                           * m_gas->moleFraction(electronIndex) * Avogadro * m_gas->molarDensity();
+            *Ep_dot = P_ext;
         } else {
             // unit: [J/m^3/s]
             double hdot_vol = 0;
@@ -250,7 +251,6 @@ public:
                     *dTdt = (-udot_vol + P_ext - P_elec - q_loss) / (rho * cv);
                 }
             }
-
         }
 
         /* --------------------- SPECIES CONSERVATION EQS --------------------- */
@@ -464,7 +464,6 @@ public:
         for (const auto& [i, e_th] : e_th_map) {
             // Calculate FGH
             double FGH = (e_th * Avogadro * ElectronCharge - m_deltaH[i]) * m_q_net[i];
-//            double FGH = (e_th * Avogadro * ElectronCharge) * q_net[i];
             FGH = m_q_net[i];
             FGH_values.emplace_back(i, FGH);
         }
@@ -574,7 +573,6 @@ private:
         for(size_t i = 0; i < reactions.size(); i++) {
             auto& reaction = reactions[i];
             if(reaction.hasKey("energy_transfer")) {
-//            const YAML::Node& energy_transfer = reactions[i]["energy_transfer"];
                 auto& energy_transfer = reaction["energy_transfer"].as<AnyMap>();
 
                 // Check for e_th

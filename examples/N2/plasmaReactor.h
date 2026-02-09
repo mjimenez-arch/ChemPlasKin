@@ -87,8 +87,9 @@ public:
         // Time derivative of the solution vector [T, he, Ep, e_vib(N2), Y_1, Y_2, ... Y_K],
         // *ydot*, are defined for clear and convenient access to these vectors:
         nSteps ++;
-//        std::cout << std::scientific << std::setprecision(10);
-//        std::cout << "eval t: " << t << std::endl;
+        // For debug:
+        // std::cout << std::scientific << std::setprecision(10);
+        // std::cout << "eval t: " << t << std::endl;
         double temperature = y[0];
         // std::cout << "evl::temperature: " << temperature << std::endl;
         m_he = y[1];
@@ -382,7 +383,6 @@ public:
     }
 
     /* ------------------- Functions to print fast gas heating info -------------------*/
-
     void printMaxFGH(){
         double maxFGH = 0.0;
         size_t  maxFGH_index;
@@ -413,7 +413,6 @@ public:
         for (const auto& [i, e_th] : e_th_map) {
             // Calculate FGH
             double FGH = (e_th * Avogadro * ElectronCharge - m_deltaH[i]) * m_q_net[i];
-//            double FGH = (e_th * Avogadro * ElectronCharge) * q_net[i];
             FGH = m_q_net[i];
             FGH_values.emplace_back(i, FGH);
         }
@@ -519,7 +518,6 @@ private:
         for(size_t i = 0; i < reactions.size(); i++) {
             auto& reaction = reactions[i];
             if(reaction.hasKey("energy_transfer")) {
-//            const YAML::Node& energy_transfer = reactions[i]["energy_transfer"];
                 auto& energy_transfer = reaction["energy_transfer"].as<AnyMap>();
 
                 // Check for e_th

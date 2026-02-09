@@ -7,9 +7,14 @@ ChemPlasKin is a free code optimized for zero-dimensional (0D) simulations of ne
 ## News
 Stay up to date with the latest changes and updates by visiting the [Releases](https://github.com/ShaoX96/ChemPlasKin/releases) page and [watching this repository](https://github.com/ShaoX96/ChemPlasKin/subscription). 
 
+#### Feb 09, 2026
+- Add example of H2 oxidation with DBD discharges (section 3.5 in the paper).
+- Add "branch_ratio" option for Boltzmann-type reactions, see [issue](https://github.com/ShaoX96/ChemPlasKin/issues/8).
+- Improved code readability and robustness.
+
 #### Aug 17, 2024
-- Two more examples: N2 plasma kinetics and nanosecond discharge in air
-- Add [YouTube video tutorials](https://www.youtube.com/playlist?list=PL-ii1YrLcH70l3tMW55IedNItE4yQ0Y7O)
+- Two more examples: N2 plasma kinetics and nanosecond discharge in air.
+- Add [YouTube video tutorials](https://www.youtube.com/playlist?list=PL-ii1YrLcH70l3tMW55IedNItE4yQ0Y7O).
 
 
 #### Aug 14, 2024
@@ -21,7 +26,7 @@ Stay up to date with the latest changes and updates by visiting the [Releases](h
 - Update `CMakeLists.txt` for portable compilation.
 
 #### July 21, 2024
-- **Initial Release**: Version 1.0.0 of ChemPlasKin is now available.
+- **Initial Release**: Version 1.0 of ChemPlasKin is now available.
 
 ## Overview
 ChemPlasKin integrates an electron Boltzmann equation solver, [CppBOLOS](https://github.com/ShaoX96/CppBOLOS), with the open-source combustion library [Cantera](https://cantera.org) at the source code level.

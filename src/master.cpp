@@ -6,7 +6,7 @@
 |    \____|_| |_|\___|_| |_| |_|_|   |_|\__,_|___/_|\_\_|_| |_|               |
 |                                                                             |
 |   A Freeware for Unified Gas-Plasma Kinetics Simulation                     |
-|   Version:      1.0.0 (July 2024)                                           |
+|   Version:      1.2 (February 2026)                                         |
 |   License:      GNU LESSER GENERAL PUBLIC LICENSE, Version 2.1              |
 |   Author:       Xiao Shao                                                   |
 |   Organization: King Abdullah University of Science and Technology (KAUST)  |
@@ -22,24 +22,9 @@
 #include "cantera/numerics/Integrator.h"
 #include <cmath>
 
-#include "plasmaReactor.h"
-#include "readParameters.h"
-
 using namespace Cantera;
-
-/* ------------------------ PREPARE FEW USEFUL FUNCTIONS ------------------------ */
-// Get number density of species [#/cm^3]
-double getNumberDens(const shared_ptr<ThermoPhase>& gas, const size_t i ){
-    return 1e-6 * gas->moleFraction(i) * Avogadro * gas->molarDensity();
-}
-
-// Logarithmically changed timestep
-// K: grow/decay order | t_N: cover period of 0-t_N | Nsteps: assigned steps | n: step index
-double logDynamicTimestep(const double& K, const double& t_N, const int& Nsteps, const int& n ) {
-    return (t_N / K) * log10( (Nsteps + (n+1)*(pow(10, K) - 1)) /
-                              (Nsteps + n*(pow(10, K) - 1)) );
-}
-
+#include "plasmaReactor.h"
+#include "utilities.h"
 
 int main(int argc, char *argv[]) {
     printHeader();
@@ -56,12 +41,13 @@ int main(int argc, char *argv[]) {
     };
 
     // Parse command-line arguments
+    std::string casePath = ".";
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
         if (arg == "-case" && i + 1 < argc) {
-            std::string basePath = argv[++i];
-            controlDictPath = basePath + "/controlDict";
-            parameterPath = basePath + "/chemPlasProperties";
+            casePath = argv[++i];
+            controlDictPath = casePath + "/controlDict";
+            parameterPath = casePath + "/chemPlasProperties";
         } else if (arg == "-log" && i + 1 < argc) {
             std::string logLevelStr = argv[++i];
             auto it = logLevels.find(logLevelStr);
@@ -115,6 +101,8 @@ int main(int argc, char *argv[]) {
     const double SMALL = 1.0e-16;
     bool fastExpansion = false;             // isentropic gas expansion flag
     t_end = std::max(pulsePeriod * nPulses, t_end); // overload t_end
+    const auto endTimeForce = readParameter<double>(controlDictPath, "endTimeForce", t_end);
+    t_end = std::min(t_end, endTimeForce);  // Terminate simulations is endTimeForce is specified
 
     /* ------------------------------- SET UP BOLTZMANN SOLVER ------------------------------- */
     std::cout << "\n========  SETTING BOLTZMANN SOLVER ... ========\n" << std::endl;
@@ -137,18 +125,18 @@ int main(int argc, char *argv[]) {
 
     // Read cross-section data
     auto csDataFile = readParameter<string>(parameterPath, "csDataFile");
-    std::stringstream ss = CppBOLOS::clean_file(csDataFile);
+    auto ss = CppBOLOS::clean_file(csDataFile);
     std::vector<CppBOLOS::Collision> collisions = CppBOLOS::parse(ss);
 
     // Set up grid. This affects accuracy significantly.
     auto gridSize = readParameter<std::map<std::string, double>>(parameterPath, "gridSize");
     BoltzmannRate::bsolver.set_grid
-            (
-                    readParameter<string>(parameterPath, "gridType"),
-                    gridSize["start"],
-                    gridSize["end"],
-                    (int)gridSize["points"]
-            );
+    (
+            readParameter<string>(parameterPath, "gridType"),
+            gridSize["start"],
+            gridSize["end"],
+            (int)gridSize["points"]
+    );
     BoltzmannRate::bsolver.load_collisions(collisions);
 
     LOG_INFO("\nA total of " + std::to_string(BoltzmannRate::bsolver.number_of_targets()) +
@@ -280,13 +268,14 @@ int main(int argc, char *argv[]) {
     clock_t t0 = clock(); // save start time
 
     // Main time loop
-    const double dTbelowTeq = readParameter<double>(controlDictPath, "dTbelowTeq");
-    while (runTime < t_end && gas->temperature() < (T_eq - dTbelowTeq)) {
+    // const auto dTbelowTeq = readParameter<double>(controlDictPath, "dTbelowTeq");
+    // while (runTime < t_end && gas->temperature() < (T_eq - dTbelowTeq)) {
+    while (runTime < t_end) {
         std::ostringstream oss; // Format output digit
         oss << "\nrunTime [s]: " << std::scientific << std::setprecision(9) << runTime;
         std::cout << oss.str() << " | iPulse: " << iPulse << "\n";
 
-        double EN_temp = EN_DC;  // default E/N value
+        double EN_temp = std::max(EN_DC, 0.1);  // default E/N value
 
         if (iPulse < nPulses) { // TODO: there could be a more concise way to do dynamic time step
             dt3 = 0.;  // Initialize timestep at discharge quiescent zone
@@ -340,7 +329,7 @@ int main(int argc, char *argv[]) {
                 dt = std::min(dt3, dt_max);
             }
         } else { // NRP discharges finished; simply apply dt_max as tentative dt value
-            if (not stayEN_DC) EN_temp = 0.0;
+            if (not stayEN_DC) EN_temp = 0.1;
             dt = dt_max;
         }
 
@@ -386,12 +375,20 @@ int main(int argc, char *argv[]) {
         if (updateBoltzmannSolver) {
             BoltzmannRate::bsolver.init();
             std::cout << "Updating EEDF ..." << "\n";
-            BoltzmannRate::updateBoltzmannSolver();
+            if (EN_temp < 1) {
+                BoltzmannRate::F0 = BoltzmannRate::bsolver.maxwell(gas->temperature()*8.6173E-5);
+            }
+            BoltzmannRate::updateBoltzmannSolver(200, 1e-5, 1E20/(EN_temp*EN_temp));
             integrator->reinitialize(runTime, odes);
-            // BoltzmannRate::updateBoltzmannSolver(300, 1e-6); // update with new iteration settings
         }
-        std::cout << "EN = " << BoltzmannRate::bsolver.get_EN() << "; Tgas = " << gas->temperature()
-                  << "; Te = " << BoltzmannRate::bsolver.get_Te() << "\n";
+
+        if (iPulse == 0) integrator->reinitialize(runTime, odes);
+
+        std::cout << "EN = " << BoltzmannRate::bsolver.get_EN()
+                  << "; Tgas = " << gas->temperature()
+                  << "; Te = " << BoltzmannRate::bsolver.get_Te()
+                  << "; n_e = " << getNumberDens(gas, odes.electronIndex)
+                  << "\n";
 
         /*----------------------  Advance time step --------------------*/
         runTime += dt;
@@ -402,7 +399,7 @@ int main(int argc, char *argv[]) {
 
         // Print out information and store data in csv
         std::cout << "Writing number density [#/cm^3] of " << gas->speciesName(index_list[0]) << ", "
-                  << gas->speciesName(index_list[1]) << ", " << gas->speciesName(index_list[2]) << ", ... " << std::endl;
+                  << gas->speciesName(index_list[1]) << ", " << gas->speciesName(index_list[2]) << "... " << std::endl;
         moleFraction_row = {};
         outputFile << runTime << ", " << gas->temperature() << ", " << 1e-6*Avogadro*gas->molarDensity();// r.temperature();
         for (const auto &i: index_list) {
@@ -413,7 +410,7 @@ int main(int argc, char *argv[]) {
         }
         outputFile << std::endl;
         std::cout << std::endl;
-        std::cout << "Conversion ratio %: " << 100*(1 - gas->moleFraction(FUELNAME)/initFuelFraction) << std::endl;
+        std::cout << "Conversion ratio %: " << 100*(1.0 - gas->moleFraction(FUELNAME)/initFuelFraction) << std::endl;
 
         // Check plasma power and energy deposited
         double power_temp = BoltzmannRate::bsolver.elec_power()
@@ -421,7 +418,6 @@ int main(int argc, char *argv[]) {
         // unit: eV m^3/s * #/kmol * kmol/m^3 * coulomb(J/eV) * #/cm^3 = J/s/cm^3
         disEnergy = 1e-3 * odes.depositedPlasmaEnergy(); // mJ/cm^3
         std::cout << "Power_input [W/cm^3]: " << power_temp << " | Energy deposited [mJ/cm^3]: " << disEnergy << "\n";
-        // double P_elec = 1.5 * GasConstant * BoltzmannRate::bsolver.get_Te();
 
         // Check if terminate nanosecond discharge, cut off by designated power deposition Ep
         dischargeOn = (disEnergy < Ep);
@@ -462,7 +458,5 @@ int main(int argc, char *argv[]) {
     double elapsed_time = static_cast<double>(t1 - t0) / CLOCKS_PER_SEC;
     std::cout << "\n======== ChemPlasKin finished. Execution time: " << elapsed_time << " (sec) ========\n" <<std::endl;
 
-
     return 0;
-
 }

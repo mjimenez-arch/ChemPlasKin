@@ -1,7 +1,4 @@
-//
-// Created by Xiao Shao on 2024/4/11.
-//
-#include <optional>
+// Utility functions
 
 void printHeader() {
     std::cout << "/*--------------------------------*- C++ -*----------------------------------*\\\n";
@@ -11,9 +8,9 @@ void printHeader() {
     std::cout << "|   | |___| | | |  __/ | | | | |  __/| | (_| \\__ \\ . \\| | | | |               |\n";
     std::cout << "|    \\____|_| |_|\\___|_| |_| |_|_|   |_|\\__,_|___/_|\\_\\_|_| |_|               |\n";
     std::cout << "|                                                                             |\n";
-    std::cout << "|   A Freeware for Unified Chemistry-Plasma Kinetics Simulation               |\n";
+    std::cout << "|   A Freeware for Unified Gas-Plasma Kinetics Simulation                     |\n";
     std::cout << "|   License:      GNU LESSER GENERAL PUBLIC LICENSE, Version 2.1              |\n";
-    std::cout << "|   Version:      1.0.0 (July 2024)                                           |\n";
+    std::cout << "|   Version:      1.2 (February 2026)                                         |\n";
     std::cout << "|   Author:       Xiao Shao                                                   |\n";
     std::cout << "|   Organization: King Abdullah University of Science and Technology (KAUST)  |\n";
     std::cout << "|   Contact:      xiao.shao@kaust.edu.sa                                      |\n";
@@ -22,7 +19,7 @@ void printHeader() {
 
 // Read parameters from case files
 template <typename T>
-T readParameter(const std::string& fileName, const std::string& paramName) {
+T readParameter(const std::string& fileName, const std::string& paramName, std::optional<T> defaultValue = std::nullopt) {
     std::ifstream inFile(fileName);
     std::string line;
 
@@ -45,7 +42,7 @@ T readParameter(const std::string& fileName, const std::string& paramName) {
                     inBlock = true;  // Entering the block
                     continue;
                 }
-                // For reading species list
+                    // For reading species list
                 else if constexpr (std::is_same<T, std::vector<std::string>>::value) {
                     std::string valueStr;
                     std::getline(iss, valueStr, ';');
@@ -58,7 +55,7 @@ T readParameter(const std::string& fileName, const std::string& paramName) {
                     }
                     return value;
                 }
-                // For boolean type
+                    // For boolean type
                 else if constexpr (std::is_same<T, bool>::value) {
                     std::string value;
                     if (std::getline(iss, value, ';')) {
@@ -71,7 +68,7 @@ T readParameter(const std::string& fileName, const std::string& paramName) {
                         }
                     }
                 }
-                // For other non-boolean types
+                    // For other non-boolean types
                 else {
                     std::string valueStr;
                     if (std::getline(iss, valueStr, ';')) {
@@ -113,7 +110,13 @@ T readParameter(const std::string& fileName, const std::string& paramName) {
         return *optValue;
     }
 
-    throw std::runtime_error("Parameter not found: " + paramName);
+    // If parameter is not found and no default value is provided, throw an error
+    if (!defaultValue.has_value()) {
+        throw std::runtime_error("Parameter not found: " + paramName);
+    }
+
+    // Return the default value if provided
+    return defaultValue.value();
 }
 
 // Function to read CSV data
@@ -177,3 +180,14 @@ double interpolate(const std::vector<std::pair<double, double>> &y_t, double que
     return boundaryValue;
 }
 
+// Get number density of species [#/cm^3]
+double getNumberDens(const shared_ptr<ThermoPhase>& gas, const size_t i ){
+    return 1e-6 * gas->moleFraction(i) * Avogadro * gas->molarDensity();
+}
+
+// Logarithmically changed timestep
+// K: grow/decay order | t_N: cover period of 0-t_N | Nsteps: assigned steps | n: step index
+double logDynamicTimestep(const double& K, const double& t_N, const int& Nsteps, const int& n ) {
+    return (t_N / K) * log10( (Nsteps + (n+1)*(pow(10, K) - 1)) /
+                              (Nsteps + n*(pow(10, K) - 1)) );
+}

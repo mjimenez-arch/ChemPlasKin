@@ -6,7 +6,7 @@
 |    \____|_| |_|\___|_| |_| |_|_|   |_|\__,_|___/_|\_\_|_| |_|               |
 |                                                                             |
 |   A Freeware for Unified Gas-Plasma Kinetics Simulation                     |
-|   Version:      1.0.0 (July 2024)                                           |
+|   Version:      1.2 (Feb 2026)                                           |
 |   License:      GNU LESSER GENERAL PUBLIC LICENSE, Version 2.1              |
 |   Author:       Xiao Shao                                                   |
 |   Organization: King Abdullah University of Science and Technology (KAUST)  |
@@ -23,15 +23,9 @@
 #include "cantera/zerodim.h"
 #include "cantera/numerics/Integrator.h"
 
-#include "plasmaReactor.h"
-
 using namespace Cantera;
-
-/* ------------------------ PREPARE FEW USEFUL FUNCTIONS ------------------------ */
-// Get number density of species [#/cm^3]
-double getNumberDens(const shared_ptr<ThermoPhase>& gas, const size_t i ){
-    return 1e-6 * gas->moleFraction(i) * Avogadro * gas->molarDensity();
-}
+#include "plasmaReactor.h"
+#include "../../src/utilities.h"
 
 int main()
 {
@@ -93,7 +87,7 @@ int main()
 
     // Read cross-section data
     std::string filename = "../../../data/LXCat/bolsigdb_N2.dat";
-    std::stringstream ss = CppBOLOS::clean_file(filename);
+    auto ss = CppBOLOS::clean_file(filename);
     std::vector<CppBOLOS::Collision> collisions = CppBOLOS::parse(ss);
 
     // Set up grid.
