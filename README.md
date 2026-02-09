@@ -7,10 +7,16 @@ ChemPlasKin is a free code optimized for zero-dimensional (0D) simulations of ne
 ## News
 Stay up to date with the latest changes and updates by visiting the [Releases](https://github.com/ShaoX96/ChemPlasKin/releases) page and [watching this repository](https://github.com/ShaoX96/ChemPlasKin/subscription). 
 
+
 #### Feb 09, 2026
 - Add example of H2 oxidation with DBD discharges (section 3.5 in the paper).
 - Add "branch_ratio" option for Boltzmann-type reactions, see [issue](https://github.com/ShaoX96/ChemPlasKin/issues/8).
 - Improved code readability and robustness.
+
+
+#### Aug 18, 2025
+- ChemPlasKin has been integrated into OpenFOAM to build a fully coupled high fidelity solver for plasma & reacting flow. Read [paper](https://iopscience.iop.org/article/10.1088/1361-6595/adfc0b).
+
 
 #### Aug 17, 2024
 - Two more examples: N2 plasma kinetics and nanosecond discharge in air.
