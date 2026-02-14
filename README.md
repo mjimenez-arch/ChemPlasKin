@@ -90,6 +90,7 @@ Therefore, it is suggested to use [Windows Subsystem for Linux (WSL)](https://le
    ```sh
    cd cantera
    git checkout 3.0
+   git submodule update --init --recursive
    scons build
    ```
    You will see "Compilation completed successfully" message upon successful compilation.
